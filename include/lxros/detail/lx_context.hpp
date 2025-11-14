@@ -19,6 +19,16 @@ public:
         return ctx;
     }
 
+    void init(int & argc, char ** argv)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!initialized_) {
+            rclcpp::init(argc, argv);
+            executor_ = std::make_unique<rclcpp::executors::SingleThreadedExecutor>();
+            initialized_ = true;
+        }
+    }
+
     void ensure_init()
     {
         std::lock_guard<std::mutex> lock(mutex_);

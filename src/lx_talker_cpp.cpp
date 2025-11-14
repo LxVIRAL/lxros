@@ -6,6 +6,7 @@ using namespace std::chrono_literals;
 
 int main(int argc, char ** argv)
 {
+    lxros::init(argc, argv);
     lxros::LxNode node("lx_talker_cpp");
     auto pub = node.pub<std_msgs::msg::String>("chatter_cpp");
 

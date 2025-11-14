@@ -7,6 +7,11 @@
 
 namespace lxros {
 
+inline void init(int & argc, char ** argv)
+{
+    detail::LxContext::instance().init(argc, argv);
+}
+
 inline void run()
 {
     detail::LxContext::instance().spin();

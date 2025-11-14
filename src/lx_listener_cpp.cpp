@@ -15,7 +15,7 @@ public:
     void callback(const std_msgs::msg::String & msg)
     {    
         RCLCPP_INFO(rclcpp::get_logger("lx_listener_cpp"), "I heard: '%s' %d", msg.data.c_str(),k);
-        this->k++;
+        this->k--;
     }
     int k;
     lxros::LxNode node;
@@ -23,7 +23,7 @@ public:
 
 int main(int argc, char ** argv)
 {
-
+    lxros::init(argc, argv);
     ListenerClass cl;
     
 
