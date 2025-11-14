@@ -43,6 +43,12 @@ add_executable(lx_listener_cpp src/lx_listener_cpp.cpp)
 target_include_directories(lx_listener_cpp PRIVATE include)
 ament_target_dependencies(lx_listener_cpp rclcpp std_msgs)
 
+install(
+  DIRECTORY scripts/
+  DESTINATION lib/${PROJECT_NAME}
+  USE_SOURCE_PERMISSIONS
+  FILES_MATCHING PATTERN "*.py"
+)
 
 
 
