@@ -138,12 +138,12 @@ public:
     LxNode & operator=(LxNode &&) noexcept = default;
 
     // Basic info
-    const std::string & name() const
+    std::string name() const
     {
         return node_->get_name();
     }
 
-    const std::string & namespace_() const
+    std::string namespace_() const
     {
         return node_->get_namespace();
     }

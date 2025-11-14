@@ -70,7 +70,7 @@ public:
 
 private:
     LxContext() = default;
-    ~LxContext() { shutdown(); }
+    ~LxContext() = default; //{ shutdown(); }
 
     LxContext(const LxContext &) = delete;
     LxContext & operator=(const LxContext &) = delete;
