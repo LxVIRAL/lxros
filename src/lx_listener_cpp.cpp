@@ -2,16 +2,30 @@
 #include <std_msgs/msg/string.hpp>
 #include "lxros/lxros.hpp"
 
-int callback(const std_msgs::msg::String & msg)
-{    
-    RCLCPP_INFO(rclcpp::get_logger("lx_listener_cpp"), "I heard: '%s'", msg.data.c_str());
-    return 0;
-}
+
+
+class ListenerClass
+{
+public:
+    ListenerClass() : node("lx_listener_cpp") {        
+        this->k=0;
+        
+        auto sub = node.sub<std_msgs::msg::String>("chatter_cpp",&ListenerClass::callback,this);    
+    }
+    void callback(const std_msgs::msg::String & msg)
+    {    
+        RCLCPP_INFO(rclcpp::get_logger("lx_listener_cpp"), "I heard: '%s' %d", msg.data.c_str(),k);
+        this->k++;
+    }
+    int k;
+    lxros::LxNode node;
+};
 
 int main(int argc, char ** argv)
 {
-    lxros::LxNode node("lx_listener_cpp");
-    auto sub = node.sub<std_msgs::msg::String>("chatter_cpp",callback);
+
+    ListenerClass cl;
+    
 
     /*
     auto sub = node.sub<std_msgs::msg::String>("chatter_cpp",
