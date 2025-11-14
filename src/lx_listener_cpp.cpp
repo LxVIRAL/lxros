@@ -14,7 +14,7 @@ public:
     }
     void callback(const std_msgs::msg::String & msg)
     {    
-        RCLCPP_INFO(rclcpp::get_logger("lx_listener_cpp"), "I heard: '%s' %d", msg.data.c_str(),k);
+        RCLCPP_INFO(node.logger(), "I heard: '%s' %d", msg.data.c_str(),k);
         this->k--;
     }
     int k;
