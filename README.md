@@ -4,7 +4,10 @@
 
 LxROS is a lightweight helper library that simplifies common ROS 2 patterns in **C++** and **Python**.  
 It provides small wrappers for node creation, publishers, subscribers, timers, services, actions, and launch files.  
-The goal is to reduce boilerplate while keeping ROS 2 concepts explicit and visible.
+The goal is to reduce boilerplate while keeping ROS 2 concepts explicit and visible. Tries to keep things similar to how they were done in ROS1...
+
+---
+
 Made at LxViral (Lisbon Vision, Robotics, and Learning Lab @FCULisboa)
 
 ---
