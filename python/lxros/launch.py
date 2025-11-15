@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any, Dict, Mapping, MutableMapping, Optional, Sequence, Iterable, Union
 
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription
+from launch.actions import IncludeLaunchDescription, GroupAction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import PathJoinSubstitution, Command, ThisLaunchFileDir
 
