@@ -44,11 +44,22 @@ target_include_directories(lx_listener_cpp PRIVATE include)
 ament_target_dependencies(lx_listener_cpp rclcpp std_msgs)
 
 install(
-  DIRECTORY scripts/
+  DIRECTORY scripts/ 
   DESTINATION lib/${PROJECT_NAME}
   USE_SOURCE_PERMISSIONS
   FILES_MATCHING PATTERN "*.py"
 )
+install(
+  DIRECTORY launch/ 
+  DESTINATION share/${PROJECT_NAME}
+  USE_SOURCE_PERMISSIONS
+  FILES_MATCHING PATTERN "*.py"
+)
+
+install(TARGETS
+  lx_talker_cpp
+  lx_listener_cpp
+  DESTINATION lib/${PROJECT_NAME})
 
 
 
