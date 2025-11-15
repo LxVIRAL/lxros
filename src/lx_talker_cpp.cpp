@@ -32,7 +32,7 @@ int main(int argc, char ** argv)
         msg.data = "hello from lx_talker_cpp"+std::to_string(k);
         pub.publish(msg);
         //lxros::spin_for(1s);
-        std::this_thread::sleep_for (std::chrono::seconds(1));
+        std::this_thread::sleep_for (std::chrono::milliseconds(500));
     }
 
 
