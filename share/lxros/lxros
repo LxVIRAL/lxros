@@ -1,0 +1,68 @@
+#!/bin/bash
+# This file serves as both the main executable and the Bash completion source.
+
+# Check if the script is being sourced (for completion) or executed (for command logic)
+if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
+    # --- COMPLETION LOGIC (Only runs when sourced) ---
+    
+    _lxros() 
+    {
+        local cur prev COMPREPLY
+        cur=${COMP_WORDS[COMP_CWORD]}
+        
+        # NOTE: The full completion function from the previous answer goes here.
+        # It must reference 'ros2' commands, assuming ROS 2 is sourced.
+        
+        # Example of the core logic:
+        if [ "$COMP_CWORD" -eq 1 ]; then
+            local commands="topic node"
+            COMPREPLY=( $(compgen -W "$commands" -- "$cur") )
+            return 0
+        fi
+
+        if [ "$COMP_CWORD" -ge 3 ] && [ "${COMP_WORDS[1]}" == "topic" ] && [ "${COMP_WORDS[2]}" == "pub" ]; then
+            # Autocomplete topics
+            if [ $((COMP_CWORD - 3)) -eq 0 ]; then
+                local topics="$(ros2 topic list 2>/dev/null)"
+                COMPREPLY=( $(compgen -W "$topics" -- "$cur") )
+                return 0
+            fi
+            # Autocomplete message type
+            if [ $((COMP_CWORD - 3)) -eq 1 ]; then
+                local topic_name="${COMP_WORDS[3]}" 
+                local message_type="$(ros2 topic type "$topic_name" 2>/dev/null)"
+                COMPREPLY=( $(compgen -W "$message_type" -- "$cur") )
+                return 0
+            fi
+        fi
+    }
+
+    # Register the completion function
+    complete -F _lxros lxros
+    
+    # Exit the source command, only the function is defined
+    return 0
+
+fi
+
+# --- EXECUTION LOGIC (Only runs when executed) ---
+
+# Command execution starts here if the script is run directly
+if [ -z "$1" ]; then
+    echo "Usage: lxros <command> [args...]"
+    exit 1
+fi
+
+case "$1" in
+    topic)
+        # Execute 'ros2 topic' with all arguments starting from the second one
+        ros2 topic "${@:2}"
+        ;;
+    node)
+        ros2 node "${@:2}"
+        ;;
+    *)
+        echo "lxros: Unknown subcommand '$1'"
+        exit 1
+        ;;
+esac
