@@ -123,17 +123,25 @@ class LxActionClient:
         return result_future.result().result
 
     def send_async(self, goal: Any = None, **fields: Any):
-        # Build goal
+        # Build or convert goal
         if goal is None:
             goal = self._type.Goal()
             for k, v in fields.items():
                 setattr(goal, k, v)
+        elif isinstance(goal, dict):
+            g = self._type.Goal()
+            for k, v in goal.items():
+                setattr(g, k, v)
+            goal = g
+        else:
+            # Assume the user passed an actual Goal message
+            pass
 
         # Wait for server
         if not self._client.wait_for_server(timeout_sec=1.0):
             raise RuntimeError(f"Action server '{self._name}' not available")
 
-        # Send goal asynchronously
+        # Send async
         future = self._client.send_goal_async(goal)
 
         from .context import get_default_context
@@ -141,11 +149,12 @@ class LxActionClient:
 
         # Wait for goal handle
         while rclpy.ok() and not future.done():
-            ctx.spin_once(timeout_sec=0.2)
+            ctx.spin_once(timeout_sec=0.1)
 
         goal_handle = future.result()
         result_future = goal_handle.get_result_async()
         return goal_handle, result_future
+
 
 
     def cancel(self, goal_handle):
