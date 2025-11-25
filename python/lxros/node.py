@@ -4,6 +4,9 @@ from typing import Any, Callable, Optional
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile
+from rclpy.action import ActionServer, ActionClient
+from .actions import LxActionServer, LxActionClient
+
 
 # Forward-declared type to avoid circular imports in type checking
 if False:  # pragma: no cover
@@ -175,6 +178,9 @@ class LxNode:
         self._subscriptions: list[LxSubscription] = []
         self._services: list[LxService] = []
         self._timers: list[Any] = []
+        self._actions_servers: list[LxActionServer] = []
+        self._actions_clients: list[LxActionClient] = []
+
 
     # ---- Core properties ----
 
@@ -354,3 +360,57 @@ class LxNode:
                 raise TypeError(f"Cannot cast parameter '{name}' value '{value}' to {type}")
 
         return value
+
+    # ---- Action Server ----
+    def action_server(
+        self,
+        name: str,
+        action_type: Any,
+        execute_callback: Callable[[Any], Any],
+    ) -> LxActionServer:
+
+        def _internal_execute(goal_handle: ServerGoalHandle):
+            goal = goal_handle.request
+
+            # User callback
+            user_result = execute_callback(goal)
+
+            # Convert dict -> Result
+            if isinstance(user_result, dict):
+                result = action_type.Result()
+                for k, v in user_result.items():
+                    setattr(result, k, v)
+            else:
+                result = user_result
+
+            goal_handle.succeed()
+            return result
+        
+        def _allow_cancel(goal_handle):
+            return CancelResponse.ACCEPT
+
+
+        server = ActionServer(
+            node=self._node,
+            action_type=action_type,
+            action_name=name,
+            execute_callback=_internal_execute,
+            cancel_callback=_allow_cancel,
+
+        )
+
+        wrapper = LxActionServer(self, name, action_type, server, execute_callback)
+        self._actions_servers.append(wrapper)
+        return wrapper
+
+
+    # ---- Action Client ----
+    def action_client(
+        self,
+        name: str,
+        action_type: Any,
+    ) -> LxActionClient:
+        client = ActionClient(self._node, action_type, name)
+        wrapper = LxActionClient(self, name, action_type, client)
+        self._actions_clients.append(wrapper)
+        return wrapper
