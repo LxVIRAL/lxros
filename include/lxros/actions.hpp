@@ -283,8 +283,8 @@ make_action_server(const std::shared_ptr<rclcpp::Node> & node,
                    GoalCb && goal_cb,
                    CancelCb && cancel_cb)
 {
-  using Server     = rclcpp_action::Server<ActionT>;
-  using ServerPtr  = typename Server::SharedPtr;
+  //using Server     = rclcpp_action::Server<ActionT>;
+  //using ServerPtr  = typename Server::SharedPtr;
   using GoalHandle = rclcpp_action::ServerGoalHandle<ActionT>;
   using Goal       = typename ActionT::Goal;
   using Feedback   = typename ActionT::Feedback;
