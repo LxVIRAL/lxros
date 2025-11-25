@@ -16,6 +16,10 @@ def main():
     print("Sending Fibonacci goal...")
     goal_handle, result_future = client.send_async(goal)
 
+    time.sleep(1.0)
+    print("Sending Fibonacci goal2...")
+    goal_handle, result_future = client.send_async({"order": 10})
+
     # Wait a bit
     time.sleep(5.0)
 
