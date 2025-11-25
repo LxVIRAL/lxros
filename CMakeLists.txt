@@ -13,6 +13,8 @@ find_package(ament_cmake_python REQUIRED)
 find_package(ament_cmake_gtest REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(rclcpp_action REQUIRED)
+
 
 install(
   DIRECTORY include/
@@ -31,17 +33,23 @@ ament_python_install_package(${PROJECT_NAME}
 
 ament_add_gtest(test_lxros_cpp test/test_lxros_cpp.cpp)
 target_include_directories(test_lxros_cpp PRIVATE include)
-ament_target_dependencies(test_lxros_cpp rclcpp std_msgs)
+ament_target_dependencies(test_lxros_cpp rclcpp std_msgs rclcpp_action)
 
 
 
 add_executable(lx_talker_cpp src/lx_talker_cpp.cpp)
 target_include_directories(lx_talker_cpp PRIVATE include)
-ament_target_dependencies(lx_talker_cpp rclcpp std_msgs)
+ament_target_dependencies(lx_talker_cpp rclcpp std_msgs rclcpp_action)
 
 add_executable(lx_listener_cpp src/lx_listener_cpp.cpp)
 target_include_directories(lx_listener_cpp PRIVATE include)
-ament_target_dependencies(lx_listener_cpp rclcpp std_msgs)
+ament_target_dependencies(lx_listener_cpp rclcpp std_msgs rclcpp_action)
+
+
+find_package(example_interfaces REQUIRED)
+add_executable(lx_actions_cpp src/lx_actions_cpp.cpp)
+target_include_directories(lx_actions_cpp PRIVATE include)
+ament_target_dependencies(lx_actions_cpp rclcpp std_msgs rclcpp_action example_interfaces)
 
 install(
   DIRECTORY scripts/ 
@@ -59,12 +67,14 @@ install(
 install(TARGETS
   lx_talker_cpp
   lx_listener_cpp
+  lx_actions_cpp
   DESTINATION lib/${PROJECT_NAME})
 
 
 
 ament_export_include_directories(include)
-ament_export_dependencies(rclcpp)
+ament_export_dependencies(rclcpp rclcpp_action)
+
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

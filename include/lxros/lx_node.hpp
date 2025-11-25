@@ -5,7 +5,9 @@
 #include <vector>
 
 #include <rclcpp/rclcpp.hpp>
-#include "lxros/detail/lx_context.hpp"   // <-- important
+#include "lxros/detail/lx_context.hpp"
+#include "topics.hpp"
+#include "actions.hpp"   
 
 namespace lxros {
 namespace detail {
@@ -14,80 +16,6 @@ namespace detail {
 void register_node(const std::shared_ptr<rclcpp::Node> & node);
 
 } // namespace detail
-
-
-// ------------------------
-// Publisher wrapper (ROS1-style)
-// ------------------------
-
-template<class Msg>
-class Publisher {
-public:
-    using RclPublisher     = rclcpp::Publisher<Msg>;
-    using RclPublisherPtr  = std::shared_ptr<RclPublisher>;
-    using WeakRclPublisher = std::weak_ptr<RclPublisher>;
-
-    Publisher() = default;
-
-    explicit Publisher(const WeakRclPublisher & weak_pub)
-    : weak_pub_(weak_pub)
-    {}
-
-    // ROS1-style API
-    void publish(const Msg & msg) const
-    {
-        if (auto p = weak_pub_.lock()) {
-            p->publish(msg);
-        }
-        // If expired: node was destroyed → do nothing.
-    }
-
-    // Escape hatch
-    RclPublisherPtr raw() const
-    {
-        return weak_pub_.lock();
-    }
-
-    explicit operator bool() const
-    {
-        return !weak_pub_.expired();
-    }
-
-private:
-    WeakRclPublisher weak_pub_;
-};
-
-
-// ------------------------
-// Subscription wrapper
-// ------------------------
-
-template<class Msg>
-class Subscription {
-public:
-    using RclSubscription     = rclcpp::Subscription<Msg>;
-    using RclSubscriptionPtr  = std::shared_ptr<RclSubscription>;
-    using WeakRclSubscription = std::weak_ptr<RclSubscription>;
-
-    Subscription() = default;
-
-    explicit Subscription(const WeakRclSubscription & weak_sub)
-    : weak_sub_(weak_sub)
-    {}
-
-    RclSubscriptionPtr raw() const
-    {
-        return weak_sub_.lock();
-    }
-
-    explicit operator bool() const
-    {
-        return !weak_sub_.expired();
-    }
-
-private:
-    WeakRclSubscription weak_sub_;
-};
 
 
 // ------------------------
@@ -220,6 +148,53 @@ public:
 
         return sub<Msg>(topic, std::move(wrapper), queue_size);
     }
+    
+    template<class ActionT>
+    ActionClient<ActionT> action_client(const std::string & name)
+    {
+        auto client = rclcpp_action::create_client<ActionT>(node_, name);
+
+        action_clients_.push_back(
+            std::static_pointer_cast<rclcpp_action::ClientBase>(client));
+
+        return ActionClient<ActionT>(client);
+    }
+
+    template<class ActionT, class Handler>
+    ActionServer<ActionT>
+    action_server(const std::string & name, Handler && handler)
+    {
+        auto server = detail::make_action_server<ActionT>(
+            node_, name, std::forward<Handler>(handler));
+
+        action_servers_.push_back(
+            std::static_pointer_cast<rclcpp_action::ServerBase>(server));
+
+        return ActionServer<ActionT>(server);
+    }
+
+    template<class ActionT, class Handler, class GoalCb, class CancelCb>
+    ActionServer<ActionT>
+    action_server(const std::string & name,
+                Handler && handler,
+                GoalCb && goal_cb,
+                CancelCb && cancel_cb)
+    {
+        auto server = detail::make_action_server<ActionT>(
+            node_, name,
+            std::forward<Handler>(handler),
+            std::forward<GoalCb>(goal_cb),
+            std::forward<CancelCb>(cancel_cb));
+
+        action_servers_.push_back(
+            std::static_pointer_cast<rclcpp_action::ServerBase>(server));
+
+        return ActionServer<ActionT>(server);
+    }
+
+
+
+
 
     // (timer(), service(), action helpers will be added later)
 
@@ -234,6 +209,10 @@ private:
     std::vector<rclcpp::PublisherBase::SharedPtr>    publishers_;
     std::vector<rclcpp::SubscriptionBase::SharedPtr> subscriptions_;
     std::vector<rclcpp::TimerBase::SharedPtr>        timers_;
+    std::vector<rclcpp_action::ClientBase::SharedPtr> action_clients_;
+    std::vector<rclcpp_action::ServerBase::SharedPtr> action_servers_;
+
+
 };
 
 } // namespace lxros
