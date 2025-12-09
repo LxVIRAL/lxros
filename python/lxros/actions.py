@@ -68,62 +68,50 @@ class LxActionClient:
     def raw(self) -> ActionClient:
         return self._client
 
-    def send(
-        self,
-        goal: Any = None,
-        *,
-        timeout: Optional[float] = None,
-        feedback_cb: Optional[Callable[[Any], None]] = None,
-        **fields: Any,
-    ) -> Any:
+    def send(self, goal: Any = None, timeout: Optional[float] = None, **fields: Any):
         """
-        Synchronous goal send. Blocks until result arrives.
+        Blocking goal send.
+        Mirrors the behavior of LxServiceClient.call().
         """
+        goal_future, holder = self.send_async(goal, **fields)
 
-        # Build goal
-        if goal is None:
-            goal = self._type.Goal()
-            for k, v in fields.items():
-                setattr(goal, k, v)
-
-        # Wait for server
-        if not self._client.wait_for_server(timeout_sec=timeout):
-            raise RuntimeError(f"Action server '{self._name}' not available")
-
-        # Send goal asynchronously
-        send_future = self._client.send_goal_async(goal, feedback_callback=feedback_cb)
-
+        # Retrieve context
         from .context import get_default_context
-
         ctx = self._node._context or get_default_context()
 
         # Wait for goal handle
-        while rclpy.ok() and not send_future.done():
+        start = rclpy.clock.Clock().now()
+        while rclpy.ok() and not goal_future.done():
             ctx.spin_once(timeout_sec=0.1)
+            if timeout is not None:
+                if (rclpy.clock.Clock().now() - start).nanoseconds > timeout * 1e9:
+                    raise TimeoutError("Timed out waiting for goal to be accepted")
 
-        if send_future.cancelled():
-            raise RuntimeError("Goal send was cancelled")
-        if send_future.exception() is not None:
-            raise send_future.exception()
+        goal_handle = goal_future.result()
 
-        goal_handle = send_future.result()
-        if not goal_handle.accepted:
-            raise RuntimeError("Goal was rejected")
+        # Wait for result_future to be created
+        while holder["future"] is None:
+            ctx.spin_once(timeout_sec=0.05)
 
-        # Wait for result
-        result_future = goal_handle.get_result_async()
+        result_future = holder["future"]
+
+        # Now wait for the result
         while rclpy.ok() and not result_future.done():
             ctx.spin_once(timeout_sec=0.1)
 
-        if result_future.cancelled():
-            raise RuntimeError("Action result cancelled")
-        if result_future.exception() is not None:
-            raise result_future.exception()
+        res = result_future.result()
+        if hasattr(res, "result"):
+            return res.result
+        return None
 
-        return result_future.result().result
 
     def send_async(self, goal: Any = None, **fields: Any):
-        # Build or convert goal
+        """
+        Non-blocking goal send.
+        Returns:
+            goal_future, result_future
+        """
+        # Build goal
         if goal is None:
             goal = self._type.Goal()
             for k, v in fields.items():
@@ -133,27 +121,35 @@ class LxActionClient:
             for k, v in goal.items():
                 setattr(g, k, v)
             goal = g
-        else:
-            # Assume the user passed an actual Goal message
-            pass
+        # else assume user passed a Goal instance
 
         # Wait for server
         if not self._client.wait_for_server(timeout_sec=1.0):
             raise RuntimeError(f"Action server '{self._name}' not available")
 
-        # Send async
-        future = self._client.send_goal_async(goal)
+        # Send goal request (async)
+        goal_future = self._client.send_goal_async(goal)
 
-        from .context import get_default_context
-        ctx = self._node._context or get_default_context()
+        # This will be filled once the goal handle arrives
+        result_future_holder = {"future": None}
 
-        # Wait for goal handle
-        while rclpy.ok() and not future.done():
-            ctx.spin_once(timeout_sec=0.1)
+        def _goal_response_cb(fut):
+            goal_handle = fut.result()
+            if not goal_handle.accepted:
+                # Reject: create a completed result future
+                import concurrent.futures
+                dummy = concurrent.futures.Future()
+                dummy.set_result(None)
+                result_future_holder["future"] = dummy
+            else:
+                result_future_holder["future"] = goal_handle.get_result_async()
 
-        goal_handle = future.result()
-        result_future = goal_handle.get_result_async()
-        return goal_handle, result_future
+        goal_future.add_done_callback(_goal_response_cb)
+
+        # Do not spin or block here.
+        return goal_future, result_future_holder
+
+
 
 
 
