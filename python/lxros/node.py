@@ -414,3 +414,9 @@ class LxNode:
         wrapper = LxActionClient(self, name, action_type, client)
         self._actions_clients.append(wrapper)
         return wrapper
+
+
+    # ---- get timestamp ----
+    def get_time_msg(self) -> rclpy.time.Time:
+        """Get current time as rclpy Time message."""
+        return self._node.get_clock().now().to_msg()
