@@ -8,6 +8,7 @@
 #include "lxros/detail/lx_context.hpp"
 #include "topics.hpp"
 #include "actions.hpp"   
+#include "services.hpp"
 
 namespace lxros {
 namespace detail {
@@ -192,7 +193,73 @@ public:
         return ActionServer<ActionT>(server);
     }
 
+    template<typename T>
+    T get_param(const std::string & name, const T & default_value) const
+    {
+        T value;
+        if (node_->get_parameter(name, value))
+            return value;
+        else
+            return default_value;
+    }
 
+    // ------------------------
+    // Service client helper
+    // ------------------------
+    template<class Srv>
+    ServiceClient<Srv> service_client(const std::string & name)
+    {
+        auto client = node_->create_client<Srv>(name);
+
+        service_clients_.push_back(
+            std::static_pointer_cast<rclcpp::ClientBase>(client));
+
+        return ServiceClient<Srv>(node_, client);
+    }
+
+    // ------------------------
+    // Service server helper – generic callable
+    //   Handler: void(const Req&, Res&)
+    // ------------------------
+    template<class Srv, class Handler>
+    ServiceServer<Srv> service_server(const std::string & name, Handler && handler)
+    {
+        using Req = typename Srv::Request;
+        using Res = typename Srv::Response;
+
+        auto wrapper_cb =
+            [fn = std::forward<Handler>(handler)](const std::shared_ptr<Req> req,
+                                                  std::shared_ptr<Res> res) {
+                fn(*req, *res);
+            };
+
+        auto srv = node_->create_service<Srv>(name, wrapper_cb);
+
+        service_servers_.push_back(
+            std::static_pointer_cast<rclcpp::ServiceBase>(srv));
+
+        return ServiceServer<Srv>(srv);
+    }
+
+    // ------------------------
+    // Service server helper – member function
+    //   memfn: void(T::*)(const Req&, Res&)
+    //   obj:   T*
+    // ------------------------
+    template<class Srv, class T>
+    ServiceServer<Srv> service_server(const std::string & name,
+                                      void (T::*memfn)(const typename Srv::Request &,
+                                                       typename Srv::Response &),
+                                      T * obj)
+    {
+        auto wrapper =
+            [obj, memfn](const typename Srv::Request & req,
+                         typename Srv::Response & res) {
+                (obj->*memfn)(req, res);
+            };
+
+        return service_server<Srv>(name, std::move(wrapper));
+    }
 
 
 
@@ -211,7 +278,8 @@ private:
     std::vector<rclcpp::TimerBase::SharedPtr>        timers_;
     std::vector<rclcpp_action::ClientBase::SharedPtr> action_clients_;
     std::vector<rclcpp_action::ServerBase::SharedPtr> action_servers_;
-
+    std::vector<rclcpp::ClientBase::SharedPtr>  service_clients_;
+    std::vector<rclcpp::ServiceBase::SharedPtr> service_servers_;
 
 };
 
